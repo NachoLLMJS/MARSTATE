@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#120b0a" />
+    <meta name="description" content="在火星上建设并扩展殖民地。" />
+    <title>火星 // 栖息地</title>
+  </head>
+  <body>
+    <div class="app-loader" id="appLoader" aria-label="正在加载火星殖民地">
+      <div class="app-loader__core"><span></span><span></span><span></span></div>
+      <strong>正在载入火星殖民地</strong><small>同步城市数据 · SPCX 网络</small>
+    </div>
+    <main class="app-shell">
+      <div class="experience-layout">
+      <section class="game-frame" aria-label="火星城市建造器">
+        <header class="topbar">
+          <div class="brand">
+            <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div><strong>火星 // 栖息地</strong><small>殖民网络 01</small></div>
+          </div>
+          <div class="resources" aria-label="资源">
+            <div class="resource"><span class="resource-icon coin">◆</span><p><small>SPCX</small><b id="credits">4.000</b></p></div>
+            <div class="resource"><span class="resource-icon oxygen">O₂</span><p><small>氧气</small><b id="oxygen">100%</b></p></div>
+            <div class="resource"><span class="resource-icon people">●</span><p><small>居民</small><b id="population">0</b></p></div>
+          </div>
+          <button class="icon-button" id="soundButton" aria-label="开启或关闭声音">◖</button>
+        </header>
+
+        <div class="world-wrap" id="worldWrap">
+          <canvas id="world" aria-label="火星殖民地三维互动地图"></canvas>
+          <div class="scanlines" aria-hidden="true"></div>
+          <div class="corner top-left"></div><div class="corner top-right"></div>
+          <div class="corner bottom-left"></div><div class="corner bottom-right"></div>
+
+          <div class="mission-card glass-panel">
+            <span class="eyebrow">程序化扩张</span>
+            <strong id="missionTitle">扩展城市边界</strong>
+            <p id="missionText">在黄色标记的地块上建造，扩大城市范围。</p>
+            <div class="progress-track"><span id="progressBar"></span></div>
+            <small id="progressText">0 个模块 · 半径 16 米</small>
+          </div>
+
+          <aside class="build-panel glass-panel" id="buildPanel" aria-hidden="true">
+            <button class="close-panel" id="closePanel" aria-label="关闭">×</button>
+            <span class="eyebrow">可用地块</span>
+            <h2>部署建筑模块</h2>
+            <p class="plot-id" id="plotId">区域 A · 地块 01</p>
+            <div class="building-list">
+              <button class="building-card selected" data-building="habitat">
+                <span class="building-preview habitat-preview"><i></i><i></i><i></i></span>
+                <span><strong>阿瑞斯栖息舱</strong><small>+12 居民 · +8 O₂</small></span><b>◈ 400</b>
+              </button>
+              <button class="building-card" data-building="dome">
+                <span class="building-preview dome-preview"><i></i></span>
+                <span><strong>生命穹顶</strong><small>+20 居民 · +5 O₂</small></span><b>◈ 650</b>
+              </button>
+              <button class="building-card" data-building="tower">
+                <span class="building-preview tower-preview"><i></i><i></i></span>
+                <span><strong>赫利俄斯高塔</strong><small>+32 居民 · −4 O₂</small></span><b>◈ 900</b>
+              </button>
+              <button class="building-card" data-building="greenhouse">
+                <span class="building-preview greenhouse-preview"><i></i><i></i></span>
+                <span><strong>伊甸温室</strong><small>+8 居民 · +18 O₂</small></span><b>◈ 750</b>
+              </button>
+              <button class="building-card" data-building="reactor">
+                <span class="building-preview reactor-preview"><i></i><i></i></span>
+                <span><strong>聚变反应堆</strong><small>+6 居民 · +4 O₂</small></span><b>◈ 1100</b>
+              </button>
+              <button class="building-card" data-building="observatory">
+                <span class="building-preview observatory-preview"><i></i><i></i></span>
+                <span><strong>开普勒观测站</strong><small>+10 居民 · −2 O₂</small></span><b>◈ 850</b>
+              </button>
+              <button class="building-card" data-building="solar">
+                <span class="building-preview solar-preview"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+                <span><strong>索利斯太阳能场</strong><small>+2 居民 · 太阳能量</small></span><b>◈ 700</b>
+              </button>
+            </div>
+            <button class="primary-button" id="buildButton"><span>建造</span><b id="buildPrice">◈ 400</b></button>
+          </aside>
+
+          <div class="level-pill"><span>当前扩张等级</span><b id="levelValue">01</b></div>
+          <div class="controls-hint"><span>◉ 拖动旋转</span><span>⌁ 滚轮缩放</span><span>◆ 点击地块</span></div>
+          <button class="reset-button" id="resetButton">重置殖民地</button>
+
+          <div class="toast" id="toast" role="status" aria-live="polite"></div>
+          <div class="unlock-overlay" id="unlockOverlay" aria-hidden="true">
+            <span>边界已扩展</span><strong id="unlockName">新区域</strong>
+          </div>
+          <div class="property-modal" id="propertyModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="propertyModalTitle">
+            <div class="property-modal__card">
+              <button class="property-modal__close" id="closePropertyModal" aria-label="关闭房产信息">×</button>
+              <span class="eyebrow">链上房产 // 已验证</span>
+              <h2 id="propertyModalTitle">房产信息</h2>
+              <p class="property-modal__type" id="propertyType">阿瑞斯栖息舱</p>
+              <div class="property-wallet"><small>所有者钱包</small><strong id="propertyWallet">0x0000…0000</strong><button id="copyPropertyWallet">复制</button></div>
+              <dl class="property-details">
+                <div><dt>地块</dt><dd id="propertyParcel">LOT-0-0</dd></div>
+                <div><dt>区块</dt><dd id="propertyBlock">#42,819,240</dd></div>
+                <div><dt>状态</dt><dd id="propertyStatus">已确认</dd></div>
+              </dl>
+              <small class="property-modal__note">钱包与所有权数据已在当前网络中登记。资产收益将自动路由至金库。</small>
+            </div>
+          </div>
+        </div>
+      </section>
+      <aside class="chain-feed" aria-label="SPCX BNB 链上城市活动">
+        <header class="chain-feed__header">
+          <div><span class="eyebrow">BNB 链</span><strong>SPCX // 城市活动</strong></div>
+          <span class="simulation-badge">实时</span>
+        </header>
+        <div class="chain-stats">
+          <div><small>区块</small><b id="feedBlock">#42,819,240</b></div>
+          <div><small>玩家</small><b id="feedPlayers">128</b></div>
+          <div><small>交易量</small><b id="feedVolume">18.4K SPCX</b></div>
+        </div>
+        <div class="feed-heading"><span>实时购买</span><i></i></div>
+        <div class="tx-list" id="txFeed" aria-live="polite"></div>
+        <footer class="vault-status"><span>资产金库</span><a class="twitter-button" href="https://twitter.com" target="_blank" rel="noopener noreferrer">𝕏&nbsp; 推特社区</a><small>购买收益将自动进入金库</small></footer>
+      </aside>
+      </div>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
