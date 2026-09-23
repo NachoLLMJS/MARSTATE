@@ -1,5 +1,7 @@
 node_modules/
 dist/
+.hardhat-cache/
+artifacts-hardhat/
 .chrome-mobile-qa/
 mobile-qa.png
 *.log
@@ -7,3 +9,4 @@ mobile-qa.png
 .env.*
 !.env.example
 .vercel/
+deployment/sourcify-request.json

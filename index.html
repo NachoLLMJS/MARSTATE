@@ -10,7 +10,7 @@
   <body>
     <div class="app-loader" id="appLoader" aria-label="正在加载火星殖民地">
       <div class="app-loader__core"><span></span><span></span><span></span></div>
-      <strong>正在载入火星殖民地</strong><small>同步城市数据 · SPCX 网络</small>
+      <strong>正在载入火星殖民地</strong><small>同步城市数据 · BNB MAINNET · SPCXB</small>
     </div>
     <main class="app-shell">
       <div class="experience-layout">
@@ -21,11 +21,11 @@
             <div><strong>火星 // 栖息地</strong><small>殖民网络 01</small></div>
           </div>
           <div class="resources" aria-label="资源">
-            <div class="resource"><span class="resource-icon coin">◆</span><p><small>SPCX</small><b id="credits">4.000</b></p></div>
+            <div class="resource"><span class="resource-icon coin">◆</span><p><small>SPCXB</small><b id="credits">—</b></p></div>
             <div class="resource"><span class="resource-icon oxygen">O₂</span><p><small>氧气</small><b id="oxygen">100%</b></p></div>
             <div class="resource"><span class="resource-icon people">●</span><p><small>居民</small><b id="population">0</b></p></div>
           </div>
-          <button class="icon-button" id="soundButton" aria-label="开启或关闭声音">◖</button>
+          <button class="wallet-button" id="walletButton" aria-label="连接 BNB 钱包">连接钱包</button>
         </header>
 
         <div class="world-wrap" id="worldWrap">
@@ -50,39 +50,39 @@
             <div class="building-list">
               <button class="building-card selected" data-building="habitat">
                 <span class="building-preview habitat-preview"><i></i><i></i><i></i></span>
-                <span><strong>阿瑞斯栖息舱</strong><small>+12 居民 · +8 O₂</small></span><b>◈ 400</b>
+                <span><strong>阿瑞斯栖息舱</strong><small>+12 居民 · +8 O₂</small></span><b>10K SPCXB</b>
               </button>
               <button class="building-card" data-building="dome">
                 <span class="building-preview dome-preview"><i></i></span>
-                <span><strong>生命穹顶</strong><small>+20 居民 · +5 O₂</small></span><b>◈ 650</b>
+                <span><strong>生命穹顶</strong><small>+20 居民 · +5 O₂</small></span><b>10K SPCXB</b>
               </button>
               <button class="building-card" data-building="tower">
                 <span class="building-preview tower-preview"><i></i><i></i></span>
-                <span><strong>赫利俄斯高塔</strong><small>+32 居民 · −4 O₂</small></span><b>◈ 900</b>
+                <span><strong>赫利俄斯高塔</strong><small>+32 居民 · −4 O₂</small></span><b>10K SPCXB</b>
               </button>
               <button class="building-card" data-building="greenhouse">
                 <span class="building-preview greenhouse-preview"><i></i><i></i></span>
-                <span><strong>伊甸温室</strong><small>+8 居民 · +18 O₂</small></span><b>◈ 750</b>
+                <span><strong>伊甸温室</strong><small>+8 居民 · +18 O₂</small></span><b>10K SPCXB</b>
               </button>
               <button class="building-card" data-building="reactor">
                 <span class="building-preview reactor-preview"><i></i><i></i></span>
-                <span><strong>聚变反应堆</strong><small>+6 居民 · +4 O₂</small></span><b>◈ 1100</b>
+                <span><strong>聚变反应堆</strong><small>+6 居民 · +4 O₂</small></span><b>10K SPCXB</b>
               </button>
               <button class="building-card" data-building="observatory">
                 <span class="building-preview observatory-preview"><i></i><i></i></span>
-                <span><strong>开普勒观测站</strong><small>+10 居民 · −2 O₂</small></span><b>◈ 850</b>
+                <span><strong>开普勒观测站</strong><small>+10 居民 · −2 O₂</small></span><b>10K SPCXB</b>
               </button>
               <button class="building-card" data-building="solar">
                 <span class="building-preview solar-preview"><i></i><i></i><i></i><i></i><i></i><i></i></span>
-                <span><strong>索利斯太阳能场</strong><small>+2 居民 · 太阳能量</small></span><b>◈ 700</b>
+                <span><strong>索利斯太阳能场</strong><small>+2 居民 · 太阳能量</small></span><b>10K SPCXB</b>
               </button>
             </div>
-            <button class="primary-button" id="buildButton"><span>建造</span><b id="buildPrice">◈ 400</b></button>
+            <button class="primary-button" id="buildButton"><span>购买并铸造</span><b id="buildPrice">10K SPCXB</b></button>
           </aside>
 
           <div class="level-pill"><span>当前扩张等级</span><b id="levelValue">01</b></div>
           <div class="controls-hint"><span>◉ 拖动旋转</span><span>⌁ 滚轮缩放</span><span>◆ 点击地块</span></div>
-          <button class="reset-button" id="resetButton">重置殖民地</button>
+          <button class="reset-button" id="resetButton" title="从链上重新同步" aria-label="从链上重新同步">重新同步</button>
 
           <div class="toast" id="toast" role="status" aria-live="polite"></div>
           <div class="unlock-overlay" id="unlockOverlay" aria-hidden="true">
@@ -91,7 +91,7 @@
           <div class="property-modal" id="propertyModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="propertyModalTitle">
             <div class="property-modal__card">
               <button class="property-modal__close" id="closePropertyModal" aria-label="关闭房产信息">×</button>
-              <span class="eyebrow">链上房产 // 已验证</span>
+              <span class="eyebrow" id="propertyEyebrow">链上房产 // 已验证</span>
               <h2 id="propertyModalTitle">房产信息</h2>
               <p class="property-modal__type" id="propertyType">阿瑞斯栖息舱</p>
               <div class="property-wallet"><small>所有者钱包</small><strong id="propertyWallet">0x0000…0000</strong><button id="copyPropertyWallet">复制</button></div>
@@ -100,24 +100,24 @@
                 <div><dt>区块</dt><dd id="propertyBlock">#42,819,240</dd></div>
                 <div><dt>状态</dt><dd id="propertyStatus">已确认</dd></div>
               </dl>
-              <small class="property-modal__note">钱包与所有权数据已在当前网络中登记。资产收益将自动路由至金库。</small>
+              <small class="property-modal__note" id="propertyNote">所有权直接读取自 BNB Mainnet 的 Mars City House 合约。</small>
             </div>
           </div>
         </div>
       </section>
-      <aside class="chain-feed" aria-label="SPCX BNB 链上城市活动">
+      <aside class="chain-feed" aria-label="SPCXB BNB 链上城市活动">
         <header class="chain-feed__header">
-          <div><span class="eyebrow">BNB 链</span><strong>SPCX // 城市活动</strong></div>
-          <span class="simulation-badge">实时</span>
+          <div><span class="eyebrow">BNB MAINNET</span><strong>SPCXB // 城市活动</strong></div>
+          <span class="simulation-badge" id="chainBadge">链上</span>
         </header>
         <div class="chain-stats">
           <div><small>区块</small><b id="feedBlock">#42,819,240</b></div>
-          <div><small>玩家</small><b id="feedPlayers">128</b></div>
-          <div><small>交易量</small><b id="feedVolume">18.4K SPCX</b></div>
+          <div><small>链上房屋</small><b id="feedPlayers">0</b></div>
+          <div><small>链上交易量</small><b id="feedVolume">0 SPCXB</b></div>
         </div>
-        <div class="feed-heading"><span>实时购买</span><i></i></div>
+        <div class="feed-heading"><span>链上房屋</span><i></i></div>
         <div class="tx-list" id="txFeed" aria-live="polite"></div>
-        <footer class="vault-status"><span>资产金库</span><a class="twitter-button" href="https://twitter.com" target="_blank" rel="noopener noreferrer">𝕏&nbsp; 推特社区</a><small>购买收益将自动进入金库</small></footer>
+        <footer class="vault-status"><span>MARS CITY HOUSE</span><a class="twitter-button" href="https://bscscan.com/address/0x7208F28214A6DFf44bCcF37edbAbF6A69039aAf1" target="_blank" rel="noopener noreferrer">↗ 查看合约</a><small>每次购买的 10,000 SPCXB 直接发送至开发者钱包</small></footer>
       </aside>
       </div>
     </main>

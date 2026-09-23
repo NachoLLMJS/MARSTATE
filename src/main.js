@@ -1,6 +1,31 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { BrowserProvider, Contract, JsonRpcProvider, decodeBytes32String, encodeBytes32String, formatUnits } from 'ethers';
 import './style.css';
+
+const CHAIN_ID = 56;
+const CHAIN_HEX = '0x38';
+const RPC_URL = 'https://bsc-rpc.publicnode.com';
+const HOUSE_CONTRACT = '0x7208F28214A6DFf44bCcF37edbAbF6A69039aAf1';
+const SPCXB_CONTRACT = '0xbe9D156892E55e7154BcD3cB0FEA677F9D3103E1';
+const DEV_WALLET = '0x15eB7CEf7684524d600F87fF402B017D37139C36';
+const HOUSE_PRICE = 10_000n * 10n ** 18n;
+const HOUSE_ABI = [
+  'function mintHouse(bytes32 plotId,uint8 model) returns(uint256)',
+  'function ownerOfPlot(bytes32 plotId) view returns(address)',
+  'function houseInfo(uint256 tokenId) view returns(bytes32 plotId,uint8 model,address owner)',
+  'function totalHousesMinted() view returns(uint256)',
+  'function paused() view returns(bool)',
+  'event HouseMinted(address indexed buyer,uint256 indexed tokenId,bytes32 indexed plotId,uint8 model,uint256 price)'
+];
+const TOKEN_ABI = [
+  'function balanceOf(address) view returns(uint256)',
+  'function allowance(address,address) view returns(uint256)',
+  'function approve(address,uint256) returns(bool)'
+];
+const publicProvider = new JsonRpcProvider(RPC_URL, CHAIN_ID, { staticNetwork:true });
+const readHouse = new Contract(HOUSE_CONTRACT, HOUSE_ABI, publicProvider);
+let walletProvider=null, walletSigner=null, walletAccount='', txPending=false;
 
 const canvas = document.querySelector('#world');
 const wrap = document.querySelector('#worldWrap');
@@ -30,16 +55,21 @@ const propertyWallet = document.querySelector('#propertyWallet');
 const propertyParcel = document.querySelector('#propertyParcel');
 const propertyBlock = document.querySelector('#propertyBlock');
 const propertyStatus = document.querySelector('#propertyStatus');
+const propertyEyebrow = document.querySelector('#propertyEyebrow');
+const propertyNote = document.querySelector('#propertyNote');
+const walletButton = document.querySelector('#walletButton');
+const chainBadge = document.querySelector('#chainBadge');
 
 const BUILDINGS = {
-  habitat: { name: '阿瑞斯栖息舱', cost: 400, people: 12, oxygen: 8 },
-  dome: { name: '生命穹顶', cost: 650, people: 20, oxygen: 5 },
-  tower: { name: '赫利俄斯高塔', cost: 900, people: 32, oxygen: -4 },
-  greenhouse: { name: '伊甸温室', cost: 750, people: 8, oxygen: 18 },
-  reactor: { name: '聚变反应堆', cost: 1100, people: 6, oxygen: 4 },
-  observatory: { name: '开普勒观测站', cost: 850, people: 10, oxygen: -2 },
-  solar: { name: '索利斯太阳能场', cost: 700, people: 2, oxygen: 0 },
+  habitat: { name: '阿瑞斯栖息舱', model:0, people: 12, oxygen: 8 },
+  dome: { name: '生命穹顶', model:1, people: 20, oxygen: 5 },
+  tower: { name: '赫利俄斯高塔', model:2, people: 32, oxygen: -4 },
+  greenhouse: { name: '伊甸温室', model:3, people: 8, oxygen: 18 },
+  reactor: { name: '聚变反应堆', model:4, people: 6, oxygen: 4 },
+  observatory: { name: '开普勒观测站', model:5, people: 10, oxygen: -2 },
+  solar: { name: '索利斯太阳能场', model:6, people: 2, oxygen: 0 },
 };
+const BUILDING_BY_MODEL=Object.fromEntries(Object.entries(BUILDINGS).map(([id,data])=>[data.model,id]));
 const BLOCK_SPACING = 7;
 const cellKey=(gx,gz)=>`${gx}:${gz}`;
 const isRevealed=(gx,gz)=>state.revealed.includes(cellKey(gx,gz));
@@ -58,18 +88,15 @@ function generatePlotCatalog() {
 }
 const initialRevealed=[];
 for(let gx=-1;gx<=1;gx++)for(let gz=-1;gz<=1;gz++)initialRevealed.push(cellKey(gx,gz));
-const defaultState = { version:5, credits:4000, expansions:0, generatedRadius:6, revealed:initialRevealed, houses:[] };
-let state;
-try { state = { ...defaultState, ...JSON.parse(localStorage.getItem('mars-city-state') || '{}') }; }
-catch { state = structuredClone(defaultState); }
-if(state.version!==5)state=structuredClone(defaultState);
-if (!Array.isArray(state.houses)) state.houses = [];
-if(!Array.isArray(state.revealed))state.revealed=[...initialRevealed];
-state.expansions=Math.max(0,Number(state.expansions)||0);
-state.generatedRadius=Math.max(6,Number(state.generatedRadius)||6);
-const ownerWallets=['0x7A91…3F2C','0xC482…91AE','0x19D0…B77F','0xE5B3…42D1','0xA810…CC09','0x63FE…108B','0xB249…7DA4'];
-function walletForPlot(plotId){let hash=0;for(const char of plotId)hash=(hash*31+char.charCodeAt(0))>>>0;return ownerWallets[hash%ownerWallets.length]}
-state.houses.forEach(h=>{if(!h.wallet)h.wallet=walletForPlot(h.plot)});
+const GENESIS_HOUSES = [
+  { plot:'LOT--1--1',type:'habitat',wallet:DEV_WALLET,source:'visual-genesis' },
+  { plot:'LOT--1-0',type:'dome',wallet:DEV_WALLET,source:'visual-genesis' },
+  { plot:'LOT-0--1',type:'greenhouse',wallet:DEV_WALLET,source:'visual-genesis' },
+  { plot:'LOT-1-0',type:'tower',wallet:DEV_WALLET,source:'visual-genesis' },
+  { plot:'LOT-0-1',type:'solar',wallet:DEV_WALLET,source:'visual-genesis' }
+];
+const defaultState = { version:6, expansions:0, generatedRadius:6, revealed:initialRevealed, houses:GENESIS_HOUSES };
+let state=structuredClone(defaultState);
 generatePlotCatalog();
 
 const scene = new THREE.Scene();
@@ -327,7 +354,21 @@ const raycaster=new THREE.Raycaster(), pointer=new THREE.Vector2();
 function pointerPosition(event){const rect=canvas.getBoundingClientRect();pointer.x=((event.clientX-rect.left)/rect.width)*2-1;pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;}
 function intersectPlots(event){pointerPosition(event);raycaster.setFromCamera(pointer,camera);return raycaster.intersectObjects(plotsGroup.children,true).find(hit=>hit.object.userData.plot||hit.object.parent?.userData.plot)}
 function intersectBuildings(event){pointerPosition(event);raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(buildingsGroup.children,true)[0];if(!hit)return null;let owner=hit.object;while(owner&&owner.parent!==buildingsGroup)owner=owner.parent;return owner?.userData?.record?owner:null}
-function openPropertyModal(record){const building=BUILDINGS[record.type]||BUILDINGS.habitat;propertyType.textContent=building.name;propertyWallet.textContent=record.wallet||walletForPlot(record.plot);propertyParcel.textContent=record.plot;propertyBlock.textContent=`#${simulatedBlock.toLocaleString('en-US')}`;propertyStatus.textContent='已确认';propertyModal.classList.add('open');propertyModal.setAttribute('aria-hidden','false')}
+function shortAddress(address){return address?`${address.slice(0,6)}…${address.slice(-4)}`:'—'}
+async function openPropertyModal(record){
+  const building=BUILDINGS[record.type]||BUILDINGS.habitat;
+  propertyType.textContent=building.name;propertyWallet.textContent=record.wallet||DEV_WALLET;propertyParcel.textContent=record.plot;
+  if(record.source==='visual-genesis'){
+    propertyEyebrow.textContent='创世视觉房屋 // 开发者所有';propertyBlock.textContent='—';propertyStatus.textContent='视觉创世';
+    propertyNote.textContent='这五座初始房屋属于城市的视觉创世状态，并非已铸造的链上 NFT。';
+  }else{
+    propertyEyebrow.textContent='链上房产 // BNB MAINNET';propertyBlock.textContent=record.blockNumber?`#${Number(record.blockNumber).toLocaleString('en-US')}`:'正在读取';propertyStatus.textContent='链上确认';
+    propertyNote.textContent='所有权直接读取自 BNB Mainnet 的 Mars City House 合约。';
+    try{const owner=await readHouse.ownerOfPlot(encodeBytes32String(record.plot));if(owner!=='0x0000000000000000000000000000000000000000'){record.wallet=owner;propertyWallet.textContent=owner}}
+    catch{propertyStatus.textContent='RPC 暂时不可用'}
+  }
+  propertyModal.classList.add('open');propertyModal.setAttribute('aria-hidden','false');
+}
 function closePropertyModal(){propertyModal.classList.remove('open');propertyModal.setAttribute('aria-hidden','true')}
 canvas.addEventListener('pointermove',event=>{
   const building=intersectBuildings(event);if(building){canvas.style.cursor='pointer';return}
@@ -350,44 +391,118 @@ propertyModal.addEventListener('click',event=>{if(event.target===propertyModal)c
 document.querySelector('#copyPropertyWallet').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(propertyWallet.textContent);showToast('钱包已复制')}catch{showToast('请手动复制钱包地址')}});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){closePropertyModal();closePanel()}});
 document.querySelectorAll('.building-card').forEach(card=>card.addEventListener('click',()=>{document.querySelectorAll('.building-card').forEach(c=>c.classList.remove('selected'));card.classList.add('selected');selectedType=card.dataset.building;updateBuildButton()}));
-function updateBuildButton(){const type=BUILDINGS[selectedType];buildPrice.textContent=`◈ ${type.cost}`;buildButton.disabled=state.credits<type.cost;}
-buildButton.addEventListener('click',()=>{
-  if(!selectedPlot||state.houses.some(h=>h.plot===selectedPlot.id))return;
-  const type=BUILDINGS[selectedType];if(state.credits<type.cost){showToast('SPCX 余额不足');return}
-  state.credits-=type.cost;const builtPlot=selectedPlot;const record={plot:builtPlot.id,type:selectedType,rotation:builtPlot.rotation,wallet:walletForPlot(builtPlot.id)};state.houses.push(record);addBuilding(record,true);pushSimulatedActivity({wallet:record.wallet,type:selectedType,amount:type.cost,local:true});closePanel();saveState();updateHUD();showToast(`${type.name} 已部署`);checkExpansion(builtPlot);
+function updateBuildButton(){buildPrice.textContent='10K SPCXB';buildButton.disabled=txPending;buildButton.querySelector('span').textContent=txPending?'交易处理中':walletAccount?'购买并铸造':'连接钱包并购买'}
+async function switchToBsc(){
+  const ethereum=window.ethereum;if(!ethereum)throw new Error('请安装支持 BNB Chain 的钱包');
+  try{await ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:CHAIN_HEX}]})}
+  catch(error){if(error.code!==4902)throw error;await ethereum.request({method:'wallet_addEthereumChain',params:[{chainId:CHAIN_HEX,chainName:'BNB Smart Chain',nativeCurrency:{name:'BNB',symbol:'BNB',decimals:18},rpcUrls:[RPC_URL],blockExplorerUrls:['https://bscscan.com']} ]})}
+}
+async function refreshWalletBalance(){
+  if(!walletAccount){creditsEl.textContent='—';return}
+  try{const token=new Contract(SPCXB_CONTRACT,TOKEN_ABI,walletProvider);const balance=await token.balanceOf(walletAccount);creditsEl.textContent=Number(formatUnits(balance,18)).toLocaleString('en-US',{maximumFractionDigits:2})}
+  catch{creditsEl.textContent='RPC 错误'}
+}
+async function connectWallet(){
+  if(!window.ethereum)throw new Error('未检测到钱包');
+  await switchToBsc();
+  const accounts=await window.ethereum.request({method:'eth_requestAccounts'});if(!accounts?.[0])throw new Error('钱包未授权');
+  walletProvider=new BrowserProvider(window.ethereum);walletSigner=await walletProvider.getSigner();walletAccount=await walletSigner.getAddress();
+  walletButton.textContent=shortAddress(walletAccount);walletButton.classList.add('connected');updateBuildButton();await refreshWalletBalance();
+  if(!window.__marsWalletListeners){
+    window.__marsWalletListeners=true;
+    window.ethereum.on?.('accountsChanged',accounts=>{walletAccount=accounts?.[0]||'';walletSigner=null;walletButton.textContent=walletAccount?shortAddress(walletAccount):'连接钱包';updateBuildButton();refreshWalletBalance()});
+    window.ethereum.on?.('chainChanged',()=>{walletAccount='';walletSigner=null;walletButton.textContent='连接钱包';creditsEl.textContent='—';updateBuildButton()});
+  }
+}
+walletButton.addEventListener('click',()=>connectWallet().catch(error=>showToast(error.shortMessage||error.message||'钱包连接失败')));
+buildButton.addEventListener('click',async()=>{
+  if(txPending||!selectedPlot||state.houses.some(h=>h.plot===selectedPlot.id))return;
+  const builtPlot=selectedPlot,type=BUILDINGS[selectedType],plotBytes=encodeBytes32String(builtPlot.id);
+  try{
+    txPending=true;updateBuildButton();
+    if(!walletAccount)await connectWallet();
+    await switchToBsc();walletProvider=new BrowserProvider(window.ethereum);walletSigner=await walletProvider.getSigner();walletAccount=await walletSigner.getAddress();
+    const house=new Contract(HOUSE_CONTRACT,HOUSE_ABI,walletSigner),token=new Contract(SPCXB_CONTRACT,TOKEN_ABI,walletSigner);
+    if(await house.paused())throw new Error('合约当前已暂停');
+    if((await house.ownerOfPlot(plotBytes))!=='0x0000000000000000000000000000000000000000')throw new Error('该地块已在链上铸造');
+    const balance=await token.balanceOf(walletAccount);if(balance<HOUSE_PRICE)throw new Error('SPCXB 余额不足，需要 10,000 SPCXB');
+    const allowance=await token.allowance(walletAccount,HOUSE_CONTRACT);
+    if(allowance<HOUSE_PRICE){showToast('请在钱包中批准 10,000 SPCXB');const approval=await token.approve(HOUSE_CONTRACT,HOUSE_PRICE);const approved=await approval.wait();if(approved.status!==1)throw new Error('SPCXB 授权失败')}
+    showToast('请确认房屋铸造交易');
+    const transaction=await house.mintHouse(plotBytes,type.model);const receipt=await transaction.wait();if(receipt.status!==1)throw new Error('房屋铸造失败');
+    const minted=receipt.logs.map(log=>{try{return house.interface.parseLog(log)}catch{return null}}).find(log=>log?.name==='HouseMinted');
+    if(!minted)throw new Error('未找到 HouseMinted 事件');
+    const record={plot:builtPlot.id,type:selectedType,rotation:builtPlot.rotation,wallet:walletAccount,source:'onchain',tokenId:minted.args.tokenId.toString(),txHash:receipt.hash,blockNumber:receipt.blockNumber};
+    state.houses.push(record);addBuilding(record,true);pushChainActivity(record);closePanel();saveState();updateHUD();await refreshWalletBalance();showToast(`${type.name} 已在链上铸造`);checkExpansion(builtPlot);
+  }catch(error){showToast(error.code===4001||error.code==='ACTION_REJECTED'?'交易已取消':error.shortMessage||error.reason||error.message||'交易失败')}
+  finally{txPending=false;updateBuildButton()}
 });
 function stats(){return state.houses.reduce((sum,h)=>{const b=BUILDINGS[h.type]||BUILDINGS.habitat;sum.people+=b.people;sum.oxygen+=b.oxygen;return sum},{people:0,oxygen:100})}
-function updateHUD(){const s=stats(),radius=mapRadius();creditsEl.textContent=state.credits.toLocaleString('en-US');populationEl.textContent=s.people.toLocaleString('en-US');oxygenEl.textContent=`${Math.max(0,s.oxygen)}%`;levelEl.textContent=String(state.expansions+1).padStart(2,'0');missionTitle.textContent='扩展城市边界';missionText.textContent='在黄色标记的地块上建造，扩大城市范围。';progressText.textContent=`${state.houses.length} 个模块 · 半径 ${radius} 米`;progressBar.style.width=`${Math.min(100,35+state.expansions*8)}%`;updateBuildButton()}
+function updateHUD(){const s=stats(),radius=mapRadius();populationEl.textContent=s.people.toLocaleString('en-US');oxygenEl.textContent=`${Math.max(0,s.oxygen)}%`;levelEl.textContent=String(state.expansions+1).padStart(2,'0');missionTitle.textContent='扩展城市边界';missionText.textContent='使用 SPCXB 铸造房屋，新的地块将从迷雾中显现。';progressText.textContent=`${state.houses.length} 个模块 · 半径 ${radius} 米`;progressBar.style.width=`${Math.min(100,35+state.expansions*8)}%`;updateBuildButton()}
 function checkExpansion(plot){
   if(!plot.edge)return;
   const newly=[];
   [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dx,dz])=>{const gx=plot.gx+dx,gz=plot.gz+dz,key=cellKey(gx,gz);if(!state.revealed.includes(key)){state.revealed.push(key);newly.push(key)}});
   if(!newly.length)return;
-  state.expansions++;state.credits+=350;
+  state.expansions++;
   const furthest=Math.max(...state.revealed.map(key=>Math.max(...key.split(':').map(Number).map(Math.abs))));
   if(furthest>=state.generatedRadius-1)state.generatedRadius+=4;
   generatePlotCatalog();saveState();buildTerrain(newly);rebuildPlots();rebuildBuildings();frameColony();showToast(`${newly.length} 个新区域从迷雾中显现`);updateHUD();
 }
 function frameColony(){const r=mapRadius();controls.target.set(0,0,0);const dir=camera.position.clone().sub(controls.target).normalize();const portraitFit=camera.aspect<.75?1.64:1;camera.position.copy(controls.target).add(dir.multiplyScalar((22+r*1.12)*portraitFit));controls.update()}
-function saveState(){localStorage.setItem('mars-city-state',JSON.stringify(state))}
+function saveState(){}
 let toastTimer;function showToast(message){toast.textContent=message;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2100)}
-const SIM_WALLETS=['0x7A91…3F2C','0xC482…91AE','0x19D0…B77F','0xE5B3…42D1','0xA810…CC09','0x63FE…108B','0xB249…7DA4'];
-const SIM_TYPES=['habitat','dome','tower','greenhouse','reactor','observatory','solar'];
-let simulatedBlock=42819240,simulatedVolume=18400,simulatedPlayers=128;
-function pushSimulatedActivity({wallet,type,amount,local=false,initial=false}){
-  if(!txFeed)return;
-  if(!initial)simulatedBlock+=1+Math.floor(Math.random()*3);
-  simulatedVolume+=amount;feedBlock.textContent=`#${simulatedBlock.toLocaleString('en-US')}`;feedPlayers.textContent=String(simulatedPlayers);feedVolume.textContent=`${(simulatedVolume/1000).toFixed(1)}K SPCX`;
-  const item=document.createElement('article'),building=BUILDINGS[type]||BUILDINGS.habitat;
-  item.className='tx-item';item.innerHTML=`<div class="tx-item__top"><b>${wallet}</b><span>−${amount} SPCX</span></div><p>购买了 ${building.name}</p><div class="tx-item__bottom"><span>区块 ${simulatedBlock.toLocaleString('en-US')}</span><em>${local?'本地记录':'已确认'}</em></div>`;
-  txFeed.prepend(item);while(txFeed.children.length>7)txFeed.lastElementChild.remove();
+const shownChainEvents=new Set();
+function makeActivity(record,label='链上确认'){
+  const item=document.createElement('article'),building=BUILDINGS[record.type]||BUILDINGS.habitat,isGenesis=record.source==='visual-genesis',isReceipt=Boolean(record.txHash);
+  item.className='tx-item';
+  const top=document.createElement('div');top.className='tx-item__top';const owner=document.createElement('b');owner.textContent=shortAddress(record.wallet);const amount=document.createElement('span');amount.textContent=isGenesis?'创世视觉':isReceipt?'−10K SPCXB':`NFT #${record.tokenId}`;top.append(owner,amount);
+  const text=document.createElement('p');text.textContent=`${isGenesis?'展示':isReceipt?'购买了':'拥有'} ${building.name}`;
+  const bottom=document.createElement('div');bottom.className='tx-item__bottom';const block=document.createElement('span');block.textContent=record.blockNumber?`区块 ${Number(record.blockNumber).toLocaleString('en-US')}`:record.plot;const status=document.createElement('em');status.textContent=label;bottom.append(block,status);
+  item.append(top,text,bottom);return item;
 }
-[
-  ['0x7A91…3F2C','solar',700],['0xC482…91AE','habitat',400],['0x19D0…B77F','greenhouse',750],['0xE5B3…42D1','dome',650],['0xA810…CC09','observatory',850],['0x63FE…108B','reactor',1100]
-].reverse().forEach(([wallet,type,amount])=>pushSimulatedActivity({wallet,type,amount,initial:true}));
-setInterval(()=>{const type=SIM_TYPES[Math.floor(Math.random()*SIM_TYPES.length)],wallet=SIM_WALLETS[Math.floor(Math.random()*SIM_WALLETS.length)];simulatedPlayers+=Math.random()>.75?1:0;pushSimulatedActivity({wallet,type,amount:BUILDINGS[type].cost})},3600);
-document.querySelector('#resetButton').addEventListener('click',()=>{if(confirm('确定要重置殖民地并删除全部进度吗？')){state=structuredClone(defaultState);generatePlotCatalog();saveState();buildTerrain();rebuildPlots();rebuildBuildings();updateHUD();frameColony();showToast('殖民地已重置')}});
-document.querySelector('#soundButton').addEventListener('click',event=>{event.currentTarget.classList.toggle('active');showToast(event.currentTarget.classList.contains('active')?'声音已开启':'声音已关闭')});
+function pushChainActivity(record){const key=record.txHash||(record.source==='visual-genesis'?`genesis:${record.plot}`:`state:${record.tokenId}`);if(shownChainEvents.has(key))return;shownChainEvents.add(key);txFeed.prepend(makeActivity(record,record.source==='visual-genesis'?'非链上 NFT':record.txHash?'链上确认':'链上状态'));while(txFeed.children.length>8)txFeed.lastElementChild.remove()}
+function parsePlotCoordinates(plotName){
+  const match=/^LOT-(-?\d+)-(-?\d+)$/.exec(plotName);if(!match||match[1].length>16||match[2].length>16)return null;
+  const gx=Number(match[1]),gz=Number(match[2]);return Number.isSafeInteger(gx)&&Number.isSafeInteger(gz)?{gx,gz}:null;
+}
+function revealRecordedPlot(plotName){
+  const coordinates=parsePlotCoordinates(plotName);if(!coordinates)return false;
+  const {gx,gz}=coordinates;let changed=false;
+  [[0,0],[-1,0],[1,0],[0,-1],[0,1]].forEach(([dx,dz])=>{const key=cellKey(gx+dx,gz+dz);if(!state.revealed.includes(key)){state.revealed.push(key);changed=true}});
+  const needed=Math.max(Math.abs(gx),Math.abs(gz))+4;if(needed>state.generatedRadius){state.generatedRadius=needed;changed=true}
+  return changed;
+}
+let lastSyncedTotal=0;
+let chainSyncPending=false;
+async function syncChainState(){
+  if(chainSyncPending)return;chainSyncPending=true;
+  try{
+    const [latest,totalValue]=await Promise.all([publicProvider.getBlockNumber(),readHouse.totalHousesMinted()]);
+    const total=Number(totalValue),start=lastSyncedTotal?lastSyncedTotal+1:1,syncEnd=Math.min(total,start+99);let changed=false;
+    for(let first=start;first<=syncEnd;first+=20){
+      const ids=Array.from({length:Math.min(20,syncEnd-first+1)},(_,index)=>first+index);
+      const infos=await Promise.all(ids.map(id=>readHouse.houseInfo(id)));
+      infos.forEach((info,index)=>{
+        let plot;try{plot=decodeBytes32String(info.plotId)}catch{return}
+        const coordinates=parsePlotCoordinates(plot);if(!coordinates||!isRevealed(coordinates.gx,coordinates.gz))return;
+        const tokenId=String(ids[index]),type=BUILDING_BY_MODEL[Number(info.model)]||'habitat';
+        const genesisIndex=state.houses.findIndex(h=>h.source==='visual-genesis'&&h.plot===plot);
+        if(genesisIndex>=0){state.houses.splice(genesisIndex,1);changed=true}
+        let record=state.houses.find(h=>h.source==='onchain'&&h.tokenId===tokenId);
+        if(!record){record={plot,type,wallet:info.owner,source:'onchain',tokenId};state.houses.push(record);changed=true}
+        else if(record.wallet.toLowerCase()!==info.owner.toLowerCase()||record.plot!==plot||record.type!==type){Object.assign(record,{plot,type,wallet:info.owner});changed=true}
+        changed=revealRecordedPlot(plot)||changed;pushChainActivity(record);
+      });
+    }
+    lastSyncedTotal=Math.max(lastSyncedTotal,syncEnd);feedBlock.textContent=`#${latest.toLocaleString('en-US')}`;feedPlayers.textContent=String(total);feedVolume.textContent=`${(total*10).toLocaleString('en-US')}K SPCXB`;chainBadge.textContent='链上';chainBadge.classList.remove('offline');
+    if(changed){generatePlotCatalog();saveState();buildTerrain();rebuildPlots();rebuildBuildings();updateHUD()}
+  }catch{chainBadge.textContent='RPC 离线';chainBadge.classList.add('offline')}
+  finally{chainSyncPending=false}
+}
+GENESIS_HOUSES.forEach(pushChainActivity);
+syncChainState();setInterval(syncChainState,20000);
+document.querySelector('#resetButton').addEventListener('click',()=>{state=structuredClone(defaultState);lastSyncedTotal=0;generatePlotCatalog();buildTerrain();rebuildPlots();rebuildBuildings();updateHUD();frameColony();showToast('正在从链上重新同步城市');syncChainState()});
 
 function resize(){const w=wrap.clientWidth,h=wrap.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false)}
 new ResizeObserver(resize).observe(wrap);resize();
@@ -400,6 +515,3 @@ function animate(time){requestAnimationFrame(animate);const dt=clock.getDelta();
 
 buildTerrain();rebuildPlots();rebuildBuildings();updateHUD();frameColony();animate(0);
 requestAnimationFrame(()=>setTimeout(()=>appLoader?.classList.add('hidden'),700));
-
-// Passive colony income keeps the prototype playable without timers or servers.
-setInterval(()=>{if(state.houses.length){state.credits+=state.houses.length*5;saveState();updateHUD()}},5000);
