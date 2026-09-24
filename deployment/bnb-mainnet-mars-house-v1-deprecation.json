@@ -1,0 +1,11 @@
+{
+  "status": "confirmed",
+  "chainId": 56,
+  "contractAddress": "0x7208F28214A6DFf44bCcF37edbAbF6A69039aAf1",
+  "reason": "Superseded 10,000 SPCXB deployment; zero houses minted at deprecation",
+  "transactionHash": "0x504cb250d4b923d776ff2026f2594094642c2aded1452322ed7b3f5842a44d3e",
+  "blockNumber": 123770970,
+  "confirmations": 3,
+  "paused": true,
+  "confirmedAt": "2026-09-24T14:13:30.233Z"
+}
