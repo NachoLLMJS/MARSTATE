@@ -1,21 +1,20 @@
-# 火星 // 栖息地
+# MARSTATE
 
-基于 Three.js、Vite 与 BNB Mainnet 的火星城市建造器。
+基于 Three.js、Vite 与 BNB Mainnet 的链上火星城市建造器。
 
 ## 链上合约
 
 - 网络：BNB Smart Chain Mainnet（Chain ID `56`）
-- Mars City House ERC-721：`0x7208F28214A6DFf44bCcF37edbAbF6A69039aAf1`
+- MARSTATE 房屋 ERC-721：`0x134934B2E182f1F3D0fa2499c91bCA2eB05A852c`
 - 支付代币 SpaceX / SPCXB：`0xbe9D156892E55e7154BcD3cB0FEA677F9D3103E1`
-- 房屋价格：`10,000 SPCXB`
+- 房屋价格：`0.02 SPCXB`
 - 开发者收款钱包：`0x15eB7CEf7684524d600F87fF402B017D37139C36`
-- 部署交易：`0xd32b62ff7c4b0ebdd5ecfcae6a2b56bc943d62a73cb90e1ddadc8f915d5aeb34`
-- 部署区块：`123480145`
-- Sourcify：creation/runtime `exact_match`
+- 部署交易：`0x78d42af27ff3fd78b8ccb8bf320d89d497038758bfb255743b859ca1281a0275`
+- 部署区块：`123770131`
 
 购买流程是两笔明确的钱包交易：
 
-1. 用户批准 Mars City House 合约使用恰好 `10,000 SPCXB`。
+1. 用户批准 MARSTATE 房屋合约使用恰好 `0.02 SPCXB`。
 2. 用户调用 `mintHouse(plotId, model)` 铸造 ERC-721 房屋。
 
 SPCXB 由合约通过 `transferFrom` 直接发送到固定开发者钱包；合约不保管正常购买款。只有成功回执和 `HouseMinted` 事件才会把房屋写入城市状态并触发地图扩张。

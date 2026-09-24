@@ -363,7 +363,7 @@ async function openPropertyModal(record){
     propertyNote.textContent='这五座初始房屋属于城市的视觉创世状态，并非已铸造的链上 NFT。';
   }else{
     propertyEyebrow.textContent='链上房产 // BNB MAINNET';propertyBlock.textContent=record.blockNumber?`#${Number(record.blockNumber).toLocaleString('en-US')}`:'正在读取';propertyStatus.textContent='链上确认';
-    propertyNote.textContent='所有权直接读取自 BNB Mainnet 的 Mars City House 合约。';
+    propertyNote.textContent='所有权直接读取自 BNB Mainnet 的 MARSTATE 房屋合约。';
     try{const owner=await readHouse.ownerOfPlot(encodeBytes32String(record.plot));if(owner!=='0x0000000000000000000000000000000000000000'){record.wallet=owner;propertyWallet.textContent=owner}}
     catch{propertyStatus.textContent='RPC 暂时不可用'}
   }
