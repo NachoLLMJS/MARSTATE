@@ -10,7 +10,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 contract MarsHouseNFT is ERC721, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    uint256 public constant HOUSE_PRICE = 10_000 ether;
+    uint256 public constant HOUSE_PRICE = 0.02 ether;
     uint8 public constant MODEL_COUNT = 7;
     address public constant SPCXB = 0xbe9D156892E55e7154BcD3cB0FEA677F9D3103E1;
     address public constant DEV = 0x15eB7CEf7684524d600F87fF402B017D37139C36;

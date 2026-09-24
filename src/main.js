@@ -6,10 +6,10 @@ import './style.css';
 const CHAIN_ID = 56;
 const CHAIN_HEX = '0x38';
 const RPC_URL = 'https://bsc-rpc.publicnode.com';
-const HOUSE_CONTRACT = '0x7208F28214A6DFf44bCcF37edbAbF6A69039aAf1';
+const HOUSE_CONTRACT = '0x134934B2E182f1F3D0fa2499c91bCA2eB05A852c';
 const SPCXB_CONTRACT = '0xbe9D156892E55e7154BcD3cB0FEA677F9D3103E1';
 const DEV_WALLET = '0x15eB7CEf7684524d600F87fF402B017D37139C36';
-const HOUSE_PRICE = 10_000n * 10n ** 18n;
+const HOUSE_PRICE = 2n * 10n ** 16n;
 const HOUSE_ABI = [
   'function mintHouse(bytes32 plotId,uint8 model) returns(uint256)',
   'function ownerOfPlot(bytes32 plotId) view returns(address)',
@@ -391,7 +391,7 @@ propertyModal.addEventListener('click',event=>{if(event.target===propertyModal)c
 document.querySelector('#copyPropertyWallet').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(propertyWallet.textContent);showToast('钱包已复制')}catch{showToast('请手动复制钱包地址')}});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){closePropertyModal();closePanel()}});
 document.querySelectorAll('.building-card').forEach(card=>card.addEventListener('click',()=>{document.querySelectorAll('.building-card').forEach(c=>c.classList.remove('selected'));card.classList.add('selected');selectedType=card.dataset.building;updateBuildButton()}));
-function updateBuildButton(){buildPrice.textContent='10K SPCXB';buildButton.disabled=txPending;buildButton.querySelector('span').textContent=txPending?'交易处理中':walletAccount?'购买并铸造':'连接钱包并购买'}
+function updateBuildButton(){buildPrice.textContent='0.02 SPCXB';buildButton.disabled=txPending;buildButton.querySelector('span').textContent=txPending?'交易处理中':walletAccount?'购买并铸造':'连接钱包并购买'}
 async function switchToBsc(){
   const ethereum=window.ethereum;if(!ethereum)throw new Error('请安装支持 BNB Chain 的钱包');
   try{await ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:CHAIN_HEX}]})}
@@ -425,9 +425,9 @@ buildButton.addEventListener('click',async()=>{
     const house=new Contract(HOUSE_CONTRACT,HOUSE_ABI,walletSigner),token=new Contract(SPCXB_CONTRACT,TOKEN_ABI,walletSigner);
     if(await house.paused())throw new Error('合约当前已暂停');
     if((await house.ownerOfPlot(plotBytes))!=='0x0000000000000000000000000000000000000000')throw new Error('该地块已在链上铸造');
-    const balance=await token.balanceOf(walletAccount);if(balance<HOUSE_PRICE)throw new Error('SPCXB 余额不足，需要 10,000 SPCXB');
+    const balance=await token.balanceOf(walletAccount);if(balance<HOUSE_PRICE)throw new Error('SPCXB 余额不足，需要 0.02 SPCXB');
     const allowance=await token.allowance(walletAccount,HOUSE_CONTRACT);
-    if(allowance<HOUSE_PRICE){showToast('请在钱包中批准 10,000 SPCXB');const approval=await token.approve(HOUSE_CONTRACT,HOUSE_PRICE);const approved=await approval.wait();if(approved.status!==1)throw new Error('SPCXB 授权失败')}
+    if(allowance<HOUSE_PRICE){showToast('请在钱包中批准 0.02 SPCXB');const approval=await token.approve(HOUSE_CONTRACT,HOUSE_PRICE);const approved=await approval.wait();if(approved.status!==1)throw new Error('SPCXB 授权失败')}
     showToast('请确认房屋铸造交易');
     const transaction=await house.mintHouse(plotBytes,type.model);const receipt=await transaction.wait();if(receipt.status!==1)throw new Error('房屋铸造失败');
     const minted=receipt.logs.map(log=>{try{return house.interface.parseLog(log)}catch{return null}}).find(log=>log?.name==='HouseMinted');
@@ -456,7 +456,7 @@ const shownChainEvents=new Set();
 function makeActivity(record,label='链上确认'){
   const item=document.createElement('article'),building=BUILDINGS[record.type]||BUILDINGS.habitat,isGenesis=record.source==='visual-genesis',isReceipt=Boolean(record.txHash);
   item.className='tx-item';
-  const top=document.createElement('div');top.className='tx-item__top';const owner=document.createElement('b');owner.textContent=shortAddress(record.wallet);const amount=document.createElement('span');amount.textContent=isGenesis?'创世视觉':isReceipt?'−10K SPCXB':`NFT #${record.tokenId}`;top.append(owner,amount);
+  const top=document.createElement('div');top.className='tx-item__top';const owner=document.createElement('b');owner.textContent=shortAddress(record.wallet);const amount=document.createElement('span');amount.textContent=isGenesis?'创世视觉':isReceipt?'−0.02 SPCXB':`NFT #${record.tokenId}`;top.append(owner,amount);
   const text=document.createElement('p');text.textContent=`${isGenesis?'展示':isReceipt?'购买了':'拥有'} ${building.name}`;
   const bottom=document.createElement('div');bottom.className='tx-item__bottom';const block=document.createElement('span');block.textContent=record.blockNumber?`区块 ${Number(record.blockNumber).toLocaleString('en-US')}`:record.plot;const status=document.createElement('em');status.textContent=label;bottom.append(block,status);
   item.append(top,text,bottom);return item;
@@ -495,7 +495,7 @@ async function syncChainState(){
         changed=revealRecordedPlot(plot)||changed;pushChainActivity(record);
       });
     }
-    lastSyncedTotal=Math.max(lastSyncedTotal,syncEnd);feedBlock.textContent=`#${latest.toLocaleString('en-US')}`;feedPlayers.textContent=String(total);feedVolume.textContent=`${(total*10).toLocaleString('en-US')}K SPCXB`;chainBadge.textContent='链上';chainBadge.classList.remove('offline');
+    lastSyncedTotal=Math.max(lastSyncedTotal,syncEnd);feedBlock.textContent=`#${latest.toLocaleString('en-US')}`;feedPlayers.textContent=String(total);feedVolume.textContent=`${(total*0.02).toLocaleString('en-US',{maximumFractionDigits:2})} SPCXB`;chainBadge.textContent='链上';chainBadge.classList.remove('offline');
     if(changed){generatePlotCatalog();saveState();buildTerrain();rebuildPlots();rebuildBuildings();updateHUD()}
   }catch{chainBadge.textContent='RPC 离线';chainBadge.classList.add('offline')}
   finally{chainSyncPending=false}

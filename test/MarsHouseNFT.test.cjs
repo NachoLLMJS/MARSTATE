@@ -3,7 +3,7 @@ const { ethers, network } = require('hardhat');
 
 const DEV = '0x15eB7CEf7684524d600F87fF402B017D37139C36';
 const SPCXB = '0xbe9D156892E55e7154BcD3cB0FEA677F9D3103E1';
-const PRICE = ethers.parseEther('10000');
+const PRICE = ethers.parseEther('0.02');
 
 async function expectRevert(promise, text) {
   try { await promise; expect.fail('expected revert'); }
@@ -27,7 +27,7 @@ describe('MarsHouseNFT', function () {
     await token.connect(buyer).approve(await house.getAddress(), PRICE * 20n);
   });
 
-  it('mints a unique house NFT for exactly 10000 SPCXB paid directly to dev', async function () {
+  it('mints a unique house NFT for exactly 0.02 SPCXB paid directly to dev', async function () {
     const before = await token.balanceOf(DEV);
     const plot = ethers.id('LOT-0-0');
     await house.connect(buyer).mintHouse(plot, 0);

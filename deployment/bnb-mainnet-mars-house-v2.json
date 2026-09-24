@@ -1,0 +1,20 @@
+{
+  "status": "confirmed",
+  "chainId": 56,
+  "signer": "0x15eB7CEf7684524d600F87fF402B017D37139C36",
+  "nonce": 4,
+  "predictedAddress": "0x134934B2E182f1F3D0fa2499c91bCA2eB05A852c",
+  "creationCodeHash": "0x813222a8b080372eacb4fc441bc932a2ca48bfd9b4071cea0a0cb027ca2316d7",
+  "preparedAt": "2026-09-24T14:07:08.343Z",
+  "publicInputs": {
+    "dev": "0x15eB7CEf7684524d600F87fF402B017D37139C36",
+    "spxcb": "0xbe9D156892E55e7154BcD3cB0FEA677F9D3103E1",
+    "housePrice": "20000000000000000"
+  },
+  "transactionHash": "0x78d42af27ff3fd78b8ccb8bf320d89d497038758bfb255743b859ca1281a0275",
+  "blockNumber": 123770131,
+  "confirmations": 3,
+  "contractAddress": "0x134934B2E182f1F3D0fa2499c91bCA2eB05A852c",
+  "runtimeCodeHash": "0xa805965a3a875dc291c74de992352cb7624bfc96470cc898366b2cd33a7a25d5",
+  "confirmedAt": "2026-09-24T14:07:13.132Z"
+}

@@ -5,10 +5,10 @@ const { ethers } = require('ethers');
 const ROOT = path.resolve(__dirname, '..');
 const ENV_PATH = process.env.MARS_HOUSE_ENV || path.resolve(ROOT, '..', 'Mars-City-Builder-DEPLOY.env');
 const ARTIFACT_PATH = path.join(ROOT, 'artifacts-hardhat', 'contracts', 'MarsHouseNFT.sol', 'MarsHouseNFT.json');
-const JOURNAL_PATH = path.join(ROOT, 'deployment', 'bnb-mainnet-mars-house.json');
+const JOURNAL_PATH = path.join(ROOT, 'deployment', 'bnb-mainnet-mars-house-v2.json');
 const EXPECTED_DEV = '0x15eB7CEf7684524d600F87fF402B017D37139C36';
 const EXPECTED_SPCXB = '0xbe9D156892E55e7154BcD3cB0FEA677F9D3103E1';
-const EXPECTED_PRICE = ethers.parseEther('10000');
+const EXPECTED_PRICE = ethers.parseEther('0.02');
 
 function readEnv(file) {
   const result = {};
@@ -74,7 +74,7 @@ async function main() {
   console.log(JSON.stringify(report, null, 2));
   if (balance < required) throw new Error('Insufficient BNB for deployment with 25% headroom');
   if (!broadcast) return;
-  if (env.BROADCAST !== 'true') throw new Error('Set BROADCAST=true in the external env to authorize broadcast');
+  if (env.BROADCAST !== 'true' && process.env.BROADCAST !== 'true') throw new Error('Set BROADCAST=true in the external env or process to authorize broadcast');
   if (fs.existsSync(JOURNAL_PATH)) throw new Error('Deployment journal already exists; refusing duplicate broadcast');
 
   const prepared = {
